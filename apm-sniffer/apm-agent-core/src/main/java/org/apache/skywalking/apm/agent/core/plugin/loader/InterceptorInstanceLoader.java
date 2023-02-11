@@ -62,7 +62,7 @@ public class InterceptorInstanceLoader {
             try {
                 pluginLoader = EXTEND_PLUGIN_CLASSLOADERS.get(targetClassLoader);
                 if (pluginLoader == null) {
-                    pluginLoader = new AgentClassLoader(targetClassLoader);
+                    pluginLoader = new AgentClassLoader(targetClassLoader);// 通过要拦截的类的类加载器创建一个AgentClassLoader，这样AgentClassLoader就可以加载Interceptor类和拦截到的类
                     EXTEND_PLUGIN_CLASSLOADERS.put(targetClassLoader, pluginLoader);
                 }
             } finally {

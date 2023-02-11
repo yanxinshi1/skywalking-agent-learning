@@ -31,6 +31,7 @@ import org.apache.skywalking.apm.util.StringUtil;
 
 /**
  * Active authentication header by Config.Agent.AUTHENTICATION
+ * 在配置文件中可以配置 Config.Agent.AUTHENTICATION 字段（token），用于在请求头中添加 Authentication 字段，使得 OAP Server 可以校验请求的合法性，防止第三方恶意请求
  */
 public class AuthenticationDecorator implements ChannelDecorator {
     private static final Metadata.Key<String> AUTH_HEAD_HEADER_NAME = Metadata.Key.of("Authentication", Metadata.ASCII_STRING_MARSHALLER);

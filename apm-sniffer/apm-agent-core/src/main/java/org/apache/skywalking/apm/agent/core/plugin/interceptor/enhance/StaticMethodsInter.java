@@ -54,6 +54,13 @@ public class StaticMethodsInter {
     /**
      * Intercept the target static method.
      *
+     *      流程与AOP类似，先执行beforeMethod，然后执行原方法，最后执行afterMethod
+     *      1. 通过InterceptorInstanceLoader加载拦截器 interceptor
+     *      2. 调用interceptor的beforeMethod方法
+     *      3. 调用原方法
+     *      4. 调用interceptor的afterMethod方法
+     *      5. 返回原方法的返回值
+     *
      * @param clazz        target class
      * @param allArguments all method arguments
      * @param method       method description.
@@ -80,7 +87,7 @@ public class StaticMethodsInter {
             if (!result.isContinue()) {
                 ret = result._ret();
             } else {
-                ret = zuper.call();
+                ret = zuper.call();// 原方法的调用
             }
         } catch (Throwable t) {
             try {

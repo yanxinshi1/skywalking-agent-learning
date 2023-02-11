@@ -155,9 +155,9 @@ public class SkyWalkingAgent {
         }
 
         @Override
-        public DynamicType.Builder<?> transform(final DynamicType.Builder<?> builder,
-                                                final TypeDescription typeDescription,
-                                                final ClassLoader classLoader,
+        public DynamicType.Builder<?> transform(final DynamicType.Builder<?> builder,// 当前拦截到的类的字节码
+                                                final TypeDescription typeDescription,// 简单当成Class，包含了类的信息
+                                                final ClassLoader classLoader,// 加载 [当前拦截到的类] 加载器
                                                 final JavaModule javaModule,
                                                 final ProtectionDomain protectionDomain) {
             LoadedLibraryCollector.registerURLClassLoader(classLoader);

@@ -45,18 +45,21 @@ import org.apache.skywalking.apm.util.StringUtil;
 
 import static org.apache.skywalking.apm.agent.core.conf.Config.Collector.IS_RESOLVE_DNS_PERIODICALLY;
 
+/**
+ * @Description: 这个是 Agent 到 OAP 的大动脉，也就是网络连接的管理器，负责管理 Agent 到 OAP 的网络连接
+ */
 @DefaultImplementor
 public class GRPCChannelManager implements BootService, Runnable {
     private static final ILog LOGGER = LogManager.getLogger(GRPCChannelManager.class);
 
-    private volatile GRPCChannel managedChannel = null;
-    private volatile ScheduledFuture<?> connectCheckFuture;
-    private volatile boolean reconnect = true;
+    private volatile GRPCChannel managedChannel = null;// 网络连接
+    private volatile ScheduledFuture<?> connectCheckFuture;// 网络连接状态定时检查调度器
+    private volatile boolean reconnect = true;// 当前网络连接是否需要重连
     private final Random random = new Random();
     private final List<GRPCChannelListener> listeners = Collections.synchronizedList(new LinkedList<>());
-    private volatile List<String> grpcServers;
-    private volatile int selectedIdx = -1;
-    private volatile int reconnectCount = 0;
+    private volatile List<String> grpcServers;// 保存了所有的 OAP 地址
+    private volatile int selectedIdx = -1;// 上次选择的 OAP 地址的下标
+    private volatile int reconnectCount = 0;// 重连次数
 
     @Override
     public void prepare() {
@@ -65,6 +68,7 @@ public class GRPCChannelManager implements BootService, Runnable {
 
     @Override
     public void boot() {
+        // 检查是否配置了 OAP 的地址
         if (Config.Collector.BACKEND_SERVICE.trim().length() == 0) {
             LOGGER.error("Collector server addresses are not set.");
             LOGGER.error("Agent will not uplink any data.");
@@ -101,6 +105,7 @@ public class GRPCChannelManager implements BootService, Runnable {
     public void run() {
         LOGGER.debug("Selected collector grpc service running, reconnect:{}.", reconnect);
         if (IS_RESOLVE_DNS_PERIODICALLY && reconnect) {
+            // 是否需要周期性的解析 DNS 以及是否需要重连
             grpcServers = Arrays.stream(Config.Collector.BACKEND_SERVICE.split(","))
                     .filter(StringUtil::isNotBlank)
                     .map(eachBackendService -> eachBackendService.split(":"))
@@ -113,7 +118,7 @@ public class GRPCChannelManager implements BootService, Runnable {
                     })
                     .flatMap(domainPortPairs -> {
                         try {
-                            return Arrays.stream(InetAddress.getAllByName(domainPortPairs[0]))
+                            return Arrays.stream(InetAddress.getAllByName(domainPortPairs[0]))// 找到对应的所有 IP 地址
                                     .map(InetAddress::getHostAddress)
                                     .map(ip -> String.format("%s:%s", ip, domainPortPairs[1]));
                         } catch (Throwable t) {
@@ -129,8 +134,8 @@ public class GRPCChannelManager implements BootService, Runnable {
             if (grpcServers.size() > 0) {
                 String server = "";
                 try {
-                    int index = Math.abs(random.nextInt()) % grpcServers.size();
-                    if (index != selectedIdx) {
+                    int index = Math.abs(random.nextInt()) % grpcServers.size();// 随机选择一个 OAP 地址
+                    if (index != selectedIdx) {// 如果要重连，说明上一次连接的 OAP 地址可能不可用了，所以要换一个 OAP 地址
                         selectedIdx = index;
 
                         server = grpcServers.get(index);
@@ -148,11 +153,12 @@ public class GRPCChannelManager implements BootService, Runnable {
                                                     .build();
                         reconnectCount = 0;
                         reconnect = false;
-                        notify(GRPCChannelStatus.CONNECTED);
+                        notify(GRPCChannelStatus.CONNECTED);// 通知所有使用这个网络连接的模块，这个网络连接已经连接上了
                     } else if (managedChannel.isConnected(++reconnectCount > Config.Agent.FORCE_RECONNECTION_PERIOD)) {
                         // Reconnect to the same server is automatically done by GRPC,
                         // therefore we are responsible to check the connectivity and
                         // set the state and notify listeners
+                        // 重连到相同的 OAP 地址是 GRPC 自动完成的，因此我们需要检查网络连接的状态并设置状态以及通知监听器
                         reconnectCount = 0;
                         reconnect = false;
                         notify(GRPCChannelStatus.CONNECTED);

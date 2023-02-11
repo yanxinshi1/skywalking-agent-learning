@@ -30,6 +30,7 @@ import org.apache.skywalking.apm.agent.core.conf.Config;
 
 /**
  * Add agent version(Described in MANIFEST.MF) to the connection establish stage.
+ * 将Agent的版本号发送到OAP Server，OAP Server会根据版本号来决定是否接受该Agent的数据
  */
 public class AgentIDDecorator implements ChannelDecorator {
     private static final Metadata.Key<String> AGENT_VERSION_HEAD_HEADER_NAME = Metadata.Key.of("Agent-Version", Metadata.ASCII_STRING_MARSHALLER);

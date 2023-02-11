@@ -178,8 +178,10 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
     @Override
     protected DynamicType.Builder<?> enhanceClass(TypeDescription typeDescription, DynamicType.Builder<?> newClassBuilder,
         ClassLoader classLoader) throws PluginException {
+        // 获取静态方法拦截点
         StaticMethodsInterceptPoint[] staticMethodsInterceptPoints = getStaticMethodsInterceptPoints();
         String enhanceOriginClassName = typeDescription.getTypeName();
+        // 如果没有静态方法拦截点，那么这个插件就没有做任何增强，即不可用，直接返回
         if (staticMethodsInterceptPoints == null || staticMethodsInterceptPoints.length == 0) {
             return newClassBuilder;
         }
@@ -189,7 +191,7 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
             if (StringUtil.isEmpty(interceptor)) {
                 throw new EnhanceException("no StaticMethodsAroundInterceptor define to enhance class " + enhanceOriginClassName);
             }
-
+            // 判断是否需要重写方法的参数
             if (staticMethodsInterceptPoint.isOverrideArgs()) {
                 if (isBootstrapInstrumentation()) {
                     newClassBuilder = newClassBuilder.method(isStatic().and(staticMethodsInterceptPoint.getMethodsMatcher()))
@@ -203,6 +205,7 @@ public abstract class ClassEnhancePluginDefine extends AbstractClassEnhancePlugi
                                                                                 .to(new StaticMethodsInterWithOverrideArgs(interceptor)));
                 }
             } else {
+                // 判断是否是JDK的核心类库，如果是，那么使用BootstrapInstrumentBoost来增强
                 if (isBootstrapInstrumentation()) {
                     newClassBuilder = newClassBuilder.method(isStatic().and(staticMethodsInterceptPoint.getMethodsMatcher()))
                                                      .intercept(MethodDelegation.withDefaultConfiguration()

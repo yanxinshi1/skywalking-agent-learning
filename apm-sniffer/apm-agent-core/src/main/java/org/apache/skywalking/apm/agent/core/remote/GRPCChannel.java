@@ -42,6 +42,7 @@ public class GRPCChannel {
         NameResolverRegistry.getDefaultRegistry().register(new DnsNameResolverProvider());
 
         for (ChannelBuilder builder : channelBuilders) {
+            // 通过 ChannelBuilder 对 channelBuilder 进行装饰，比如设置最大接收消息大小和TLS证书认证
             channelBuilder = builder.build(channelBuilder);
         }
 

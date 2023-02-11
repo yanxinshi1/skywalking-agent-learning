@@ -25,6 +25,7 @@ public class StandardChannelBuilder implements ChannelBuilder {
 
     @Override
     public ManagedChannelBuilder build(ManagedChannelBuilder managedChannelBuilder) {
+        // 设置最大接收消息大小
         return managedChannelBuilder.maxInboundMessageSize(MAX_INBOUND_MESSAGE_SIZE)
                                     .usePlaintext();
     }
