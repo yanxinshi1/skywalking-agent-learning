@@ -63,7 +63,7 @@ public class ConfigurationDiscoveryService implements BootService, GRPCChannelLi
     private String uuid;
     private final Register register = new Register();
 
-    private volatile int lastRegisterWatcherSize;
+    private volatile int lastRegisterWatcherSize;// 上一次计算的注册监听器的数量
 
     private volatile ScheduledFuture<?> getDynamicConfigurationFuture;
     private volatile GRPCChannelStatus status = GRPCChannelStatus.DISCONNECT;
@@ -144,7 +144,7 @@ public class ConfigurationDiscoveryService implements BootService, GRPCChannelLi
         if (responseUuid != null && Objects.equals(this.uuid, responseUuid)) {
             return;
         }
-
+        // configurationDiscoveryCommand 可能返回了 10 个配置变更，但可能只 5 个配置了变更的监听器，这里过滤出配置了变更监听器的配置
         List<KeyStringValuePair> config = readConfig(configurationDiscoveryCommand);
 
         config.forEach(property -> {
@@ -209,6 +209,7 @@ public class ConfigurationDiscoveryService implements BootService, GRPCChannelLi
 
     /**
      * get agent dynamic config through gRPC.
+     * 通过 gRPC 获取 agent 动态配置
      */
     private void getAgentDynamicConfig() {
         LOGGER.debug("ConfigurationDiscoveryService running, status:{}.", status);
@@ -222,6 +223,7 @@ public class ConfigurationDiscoveryService implements BootService, GRPCChannelLi
                 final int size = register.keys().size();
                 if (lastRegisterWatcherSize != size) {
                     // reset uuid, avoid the same uuid causing the configuration not to be updated.
+                    // watcher 发生变动，肯定是多了新的配置，所以需要重置 uuid，避免因为 uuid 相同导致配置没有更新
                     uuid = null;
                     lastRegisterWatcherSize = size;
                 }

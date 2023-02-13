@@ -210,6 +210,7 @@ public class Config {
          * The agent sends the instance properties to the backend every `collector.heartbeat_period *
          * collector.properties_report_period_factor` seconds
          */
+        // Agent 信息上报周期因子 与上面的 HEARTBEAT_PERIOD 相乘,共同协作
         public static int PROPERTIES_REPORT_PERIOD_FACTOR = 10;
         /**
          * Collector skywalking trace receiver service addresses.

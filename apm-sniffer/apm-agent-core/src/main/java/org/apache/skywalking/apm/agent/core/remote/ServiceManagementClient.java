@@ -44,20 +44,29 @@ import org.apache.skywalking.apm.util.RunnableWithExceptionProtection;
 
 import static org.apache.skywalking.apm.agent.core.conf.Config.Collector.GRPC_UPSTREAM_TIMEOUT;
 
+/**
+ * @Description: 1.将Agent CLient 的基本信息汇报给 OAP Server
+ *               2.定时发送心跳包
+ * @param
+ * @return
+ */
 @DefaultImplementor
 public class ServiceManagementClient implements BootService, Runnable, GRPCChannelListener {
     private static final ILog LOGGER = LogManager.getLogger(ServiceManagementClient.class);
-    private static List<KeyStringValuePair> SERVICE_INSTANCE_PROPERTIES;
+    private static List<KeyStringValuePair> SERVICE_INSTANCE_PROPERTIES;// Agent Client 的基本信息
 
-    private volatile GRPCChannelStatus status = GRPCChannelStatus.DISCONNECT;
-    private volatile ManagementServiceGrpc.ManagementServiceBlockingStub managementServiceBlockingStub;
+    private volatile GRPCChannelStatus status = GRPCChannelStatus.DISCONNECT;// 当前网络链接状态
+    private volatile ManagementServiceGrpc.ManagementServiceBlockingStub managementServiceBlockingStub;// 网络服务
     private volatile ScheduledFuture<?> heartbeatFuture;
-    private volatile AtomicInteger sendPropertiesCounter = new AtomicInteger(0);
+    private volatile AtomicInteger sendPropertiesCounter = new AtomicInteger(0);// Agent Client 信息发送次数计数器
 
+    // 监听器
     @Override
     public void statusChanged(GRPCChannelStatus status) {
         if (GRPCChannelStatus.CONNECTED.equals(status)) {
+            // 找到 GRPCChannelManager 服务，拿到网络链接 Channel
             Channel channel = ServiceManager.INSTANCE.findService(GRPCChannelManager.class).getChannel();
+            // grpc 的 stub 可以理解为在 protobuf 中定义的 xxxService 的实现类
             managementServiceBlockingStub = ManagementServiceGrpc.newBlockingStub(channel);
         } else {
             managementServiceBlockingStub = null;
@@ -68,7 +77,7 @@ public class ServiceManagementClient implements BootService, Runnable, GRPCChann
     @Override
     public void prepare() {
         ServiceManager.INSTANCE.findService(GRPCChannelManager.class).addChannelListener(this);
-
+        // 从配置文件中读取 Agent Client 的基本信息
         SERVICE_INSTANCE_PROPERTIES = InstanceJsonPropertiesUtil.parseProperties();
     }
 
@@ -80,7 +89,7 @@ public class ServiceManagementClient implements BootService, Runnable, GRPCChann
             new RunnableWithExceptionProtection(
                 this,
                 t -> LOGGER.error("unexpected exception.", t)
-            ), 0, Config.Collector.HEARTBEAT_PERIOD,
+            ), 0, Config.Collector.HEARTBEAT_PERIOD,// HEARTBEAT_PERIOD = 30，每 30s 调用一次run方法
             TimeUnit.SECONDS
         );
     }
@@ -101,11 +110,16 @@ public class ServiceManagementClient implements BootService, Runnable, GRPCChann
         if (GRPCChannelStatus.CONNECTED.equals(status)) {
             try {
                 if (managementServiceBlockingStub != null) {
+                    // 心跳周期 = 30s ， 心跳周期因子 = 10 => 每 30s 调动一次 run 方法，每 10 次调用才会发送一次 Agent Client 的基本信息
+                    //          => 每 300s 也就是 5分钟 才会发送一次 Agent Client 的基本信息
+                    // Round 1: counter = 0 0 % 10 = 0
+                    // Round 2: counter = 1 1 % 10 = 1 != 0
+                    // Round 3: counter = 2 2 % 10 = 2 != 0
                     if (Math.abs(
                         sendPropertiesCounter.getAndAdd(1)) % Config.Collector.PROPERTIES_REPORT_PERIOD_FACTOR == 0) {
 
                         managementServiceBlockingStub
-                            .withDeadlineAfter(GRPC_UPSTREAM_TIMEOUT, TimeUnit.SECONDS)
+                            .withDeadlineAfter(GRPC_UPSTREAM_TIMEOUT, TimeUnit.SECONDS)// 设置请求的超时时间 30s
                             .reportInstanceProperties(InstanceProperties.newBuilder()
                                                                         .setService(Config.Agent.SERVICE_NAME)
                                                                         .setServiceInstance(Config.Agent.INSTANCE_NAME)
@@ -115,7 +129,7 @@ public class ServiceManagementClient implements BootService, Runnable, GRPCChann
                                                                         .addAllProperties(
                                                                             LoadedLibraryCollector.buildJVMInfo())
                                                                         .build());
-                    } else {
+                    } else {// 不在汇报周期内，发送心跳包
                         final Commands commands = managementServiceBlockingStub.withDeadlineAfter(
                             GRPC_UPSTREAM_TIMEOUT, TimeUnit.SECONDS
                         ).keepAlive(InstancePingPkg.newBuilder()

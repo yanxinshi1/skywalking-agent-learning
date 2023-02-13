@@ -34,6 +34,7 @@ import lombok.ToString;
  * The <code>DistributedTraceId</code> contains only one string, and can NOT be reset, creating a new instance is the
  * only option.
  */
+// 在一条链路中，无论请求分布于多少不同的进程中， TraceID 都不会改变
 @RequiredArgsConstructor
 @ToString
 @EqualsAndHashCode

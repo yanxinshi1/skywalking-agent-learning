@@ -25,7 +25,7 @@ public abstract class AbstractTag<T> {
 
     private int id;
 
-    private boolean canOverwrite;
+    private boolean canOverwrite;// key 是否可以改变
     /**
      * The key of this Tag.
      */

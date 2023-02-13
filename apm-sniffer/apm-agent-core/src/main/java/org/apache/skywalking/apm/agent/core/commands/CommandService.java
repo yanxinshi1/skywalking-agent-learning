@@ -34,17 +34,24 @@ import org.apache.skywalking.apm.network.trace.component.command.CommandDeserial
 import org.apache.skywalking.apm.network.trace.component.command.UnsupportedCommandException;
 import org.apache.skywalking.apm.util.RunnableWithExceptionProtection;
 
+/**
+ * @Description: 类似于 Command Scheduler 命令的调度器，用于接收命令并执行
+ *               收集 OAP Server 发送过来的命令，并将命令放入待处理的命令队列中
+ *               分发给 CommandExecutorService 命令执行器，由命令执行器执行命令
+ * @param
+ * @return
+ */
 @DefaultImplementor
 public class CommandService implements BootService, Runnable {
 
     private static final ILog LOGGER = LogManager.getLogger(CommandService.class);
 
-    private volatile boolean isRunning = true;
+    private volatile boolean isRunning = true;// 命令的处理流程是否正在运行
     private ExecutorService executorService = Executors.newSingleThreadExecutor(
         new DefaultNamedThreadFactory("CommandService")
     );
-    private LinkedBlockingQueue<BaseCommand> commands = new LinkedBlockingQueue<>(64);
-    private CommandSerialNumberCache serialNumberCache = new CommandSerialNumberCache();
+    private LinkedBlockingQueue<BaseCommand> commands = new LinkedBlockingQueue<>(64);// 待处理的命令队列
+    private CommandSerialNumberCache serialNumberCache = new CommandSerialNumberCache();// 缓存已经执行过的命令的序列号
 
     @Override
     public void prepare() throws Throwable {
@@ -65,7 +72,7 @@ public class CommandService implements BootService, Runnable {
             try {
                 BaseCommand command = commands.take();
 
-                if (isCommandExecuted(command)) {
+                if (isCommandExecuted(command)) {// 如果命令已经执行过，则忽略
                     continue;
                 }
 

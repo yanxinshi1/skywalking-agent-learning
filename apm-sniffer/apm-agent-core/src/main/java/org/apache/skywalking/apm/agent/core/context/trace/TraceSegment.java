@@ -31,6 +31,7 @@ import org.apache.skywalking.apm.network.language.agent.v3.SegmentObject;
  * A {@link TraceSegment} means the segment, which exists in current {@link Thread}. And the distributed trace is formed
  * by multi {@link TraceSegment}s, because the distributed trace crosses multi-processes, multi-threads. <p>
  */
+// Trace 不是一个具体的数据模型，而是多个 Segment 串起来表示的逻辑对象
 public class TraceSegment {
     /**
      * The id of this trace segment. Every segment has its unique-global-id.
@@ -57,7 +58,7 @@ public class TraceSegment {
      * element, because only one parent {@link TraceSegment} exists, but, in batch scenario, the num becomes greater
      * than 1, also meaning multi-parents {@link TraceSegment}. But we only related the first parent TraceSegment.
      */
-    private DistributedTraceId relatedGlobalTraceId;
+    private DistributedTraceId relatedGlobalTraceId;// 当前 Segment 所在的 Trace 的 ID
 
     private boolean ignore = false;
 
@@ -71,6 +72,9 @@ public class TraceSegment {
     public TraceSegment() {
         this.traceSegmentId = GlobalIdGenerator.generate();
         this.spans = new LinkedList<>();
+
+        // SkyWalking 中并没有 Trace 这一模型，所谓的 Trace 是多个 Segment 串起来的，在逻辑上表现为一个 Trace
+        // 当 new 一个新的 TraceSegment 的时候，就理解为这是一条新的链路，会生成一个新的 TraceId，这个 TraceId 会在整个 Trace 中保持不变
         this.relatedGlobalTraceId = new NewDistributedTraceId();
         this.createTime = System.currentTimeMillis();
     }
